@@ -1,25 +1,37 @@
-# This is a template for a Ruby scraper on morph.io (https://morph.io)
-# including some code snippets below that you should find helpful
+require 'scraperwiki'
+require 'mechanize'
 
-# require 'scraperwiki'
-# require 'mechanize'
-#
-# agent = Mechanize.new
-#
-# # Read in a page
-# page = agent.get("http://foo.com")
-#
-# # Find somehing on the page using css selectors
-# p page.at('div.content')
-#
-# # Write out to the sqlite database using scraperwiki library
-# ScraperWiki.save_sqlite(["name"], {"name" => "susan", "occupation" => "software developer"})
-#
-# # An arbitrary query against the database
-# ScraperWiki.select("* from data where 'name'='peter'")
+def scrape_page(page)
+  page.search('.location').each do |item|
+    if item.text.include?('No species found')
+      types_of_trees = 'No species found'
+    else
+      types_of_trees = item.at('.term-list').search(:li).map(&:text).join(', ')
+    end
 
-# You don't have to do things with the Mechanize or ScraperWiki libraries.
-# You can use whatever gems you want: https://morph.io/documentation/ruby
-# All that matters is that your final data is written to an SQLite database
-# called "data.sqlite" in the current working directory which has at least a table
-# called "data".
+    location = {
+      name: item.at(:h2).text,
+      time_planted: item.at(:strong).next.text.strip,
+      types_of_trees: types_of_trees
+    }
+
+    p location
+
+    ScraperWiki.save_sqlite([:name], location)
+  end
+end
+
+def scrape_then_click_next(page)
+  scrape_page(page)
+  if !page.link_with(text: 'Next page').nil?
+    page =  @agent.click(page.link_with(text: 'Next page')) 
+    scrape_then_click_next(page)
+  else
+    p "That’s all folks"
+  end
+end
+
+@agent = Mechanize.new
+page = @agent.get('http://trees.cityofsydney.nsw.gov.au/location/')
+
+scrape_then_click_next(page)
