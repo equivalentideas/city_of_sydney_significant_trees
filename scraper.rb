@@ -12,7 +12,8 @@ def scrape_page(page)
     location = {
       name: item.at(:h2).text,
       time_planted: item.at(:strong).next.text.strip,
-      types_of_trees: types_of_trees
+      types_of_trees: types_of_trees,
+      url: @root + item.at(:a)[:href]
     }
 
     p location
@@ -32,6 +33,7 @@ def scrape_then_click_next(page)
 end
 
 @agent = Mechanize.new
-page = @agent.get('http://trees.cityofsydney.nsw.gov.au/location/')
+@root = 'http://trees.cityofsydney.nsw.gov.au'
+page = @agent.get(@root + '/location/')
 
 scrape_then_click_next(page)
